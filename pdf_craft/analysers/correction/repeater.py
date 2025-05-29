@@ -67,15 +67,21 @@ class _Repeater:
     while self._remain_steps > 0 and \
           self._quality != _Quality.PERFECT:
 
-      resp_element = self._llm.request_xml(
-        template_name="correction",
-        user_data=request_element,
-        params={
-          "layouts_count": 4,
-          "is_footnote": self._is_footnote,
-          "marks": samples(NumberStyle.CIRCLED_NUMBER, 6),
-        },
-      )
+      try:
+        resp_element = self._llm.request_xml(
+          template_name="correction",
+          user_data=request_element,
+          params={
+            "layouts_count": 4,
+            "is_footnote": self._is_footnote,
+            "marks": samples(NumberStyle.CIRCLED_NUMBER, 6),
+          },
+        )
+      except ValueError as e:
+        print(f"❌ 校正阶段 XML 解析失败: {e}")
+        print(f"📍 处理信息: 脚注={self._is_footnote}, 剩余步骤={self._remain_steps}, 质量={self._quality}")
+        raise e
+
       quality = self._read_quality_from_element(resp_element)
       self._report_quality(quality)
       updation_element = self._save_step_file(
@@ -118,7 +124,8 @@ class _Repeater:
     if len(resp_element) > 0:
       resp_element.tag = "updation"
       file_element.append(resp_element)
-      file_element.append(request_element)
+
+    file_element.append(request_element)
 
     file_name = f"step_{self._next_index}.xml"
     file_path = self._save_path / file_name

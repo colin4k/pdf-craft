@@ -144,8 +144,39 @@ class LLM:
     raise ValueError("No valid Markdown response found")
 
   def _encode_xml(self, response: str) -> Element:
-    for element in decode_friendly(response, "response"):
-      return element
+    # 添加调试信息
+    print(f"🔍 尝试解析 XML 响应，响应长度: {len(response)} 字符")
+
+    # 尝试从 decode_friendly 获取元素
+    elements = list(decode_friendly(response, "response"))
+    if elements:
+      print(f"✅ 成功解析到 {len(elements)} 个 XML 元素")
+      return elements[0]
+
+    # 如果没有找到 "response" 标签，尝试查找其他可能的根元素
+    print("🔍 未找到 'response' 标签，尝试查找其他根元素...")
+
+    # 尝试常见的根元素标签
+    common_tags = ["correction", "overview", "updation", "request", "result", "output"]
+    for tag in common_tags:
+      elements = list(decode_friendly(response, tag))
+      if elements:
+        print(f"✅ 找到 '{tag}' 标签，包含 {len(elements)} 个元素")
+        return elements[0]
+
+    # 尝试解析所有可能的 XML 元素
+    print("🔍 尝试解析所有 XML 元素...")
+    all_elements = list(decode_friendly(response))
+    if all_elements:
+      print(f"✅ 找到 {len(all_elements)} 个 XML 元素，使用第一个")
+      return all_elements[0]
+
+    # 如果仍然失败，显示响应的前500个字符用于调试
+    print(f"❌ XML 解析完全失败")
+    print(f"📝 响应内容预览（前500字符）:")
+    print(response[:500])
+    print("..." if len(response) > 500 else "")
+
     raise ValueError("No valid XML response found")
 
   def _search_quotes(self, kind: str, response: str) -> Generator[str, None, None]:

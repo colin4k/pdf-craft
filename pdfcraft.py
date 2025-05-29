@@ -41,12 +41,12 @@ def main() -> None:
     # 检查现有进度
     _check_existing_progress()
 
+  # 如果启用翻译，需要传递翻译配置给分析器
+  translation_config = config.get("translation") if args.translate else None
+
   # 创建 LLM 实例
   llm_config = {k: v for k, v in config.items() if k != "translation"}
   llm = LLM(**llm_config)
-
-  # 如果启用翻译，需要传递翻译配置给分析器
-  translation_config = config.get("translation") if args.translate else None
 
   extractor=PDFPageExtractor(
     device="cuda",
