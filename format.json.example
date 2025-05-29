@@ -1,0 +1,12 @@
+{
+  "key": "sk-xxxxx",
+  "url": "http://192.168.1.170:3333/v1",
+  "model": "deepseek-v3.1",
+  "token_encoding": "o200k_base",
+  "translation": {
+    "enabled": true,
+    "target_language": "zh-CN",
+    "mode": "replace",
+    "prompt_template": "请将以下内容翻译为中文，直接返回翻译结果，不要包含原文。保持原有的格式和结构。"
+  }
+}
