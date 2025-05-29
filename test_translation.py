@@ -132,17 +132,25 @@ def test_translation_wrapper():
         # 模拟输入数据
         test_inputs = [
             "short text",  # 短文本，不应该翻译
-            "This is a longer text content that should be translated because it contains meaningful content and is longer than 100 characters. This text simulates a typical PDF content that would need translation.",  # 长文本，应该翻译
+            "This is a longer text content that should be translated because it contains meaningful content and is longer than 200 characters. This text simulates a typical PDF content that would need translation. It has paragraph and chapter keywords.",  # 长文本，应该翻译
+            "<xml><element>structured data</element></xml>",  # XML 数据，不应该翻译
         ]
 
         for config_idx, config in enumerate(translation_configs):
             print(f"📋 测试配置 {config_idx + 1}: {config['mode']} 模式, 目标语言: {config['target_language']}")
 
             for i, test_input in enumerate(test_inputs):
-                should_translate = len(test_input) > 100 and any(keyword in test_input.lower() for keyword in
-                                                               ['text', 'content', 'paragraph', 'chapter'])
+                # 使用新的翻译判断逻辑
+                has_text_content = len(test_input) > 200
+                has_translation_keywords = any(keyword in test_input.lower() for keyword in
+                                              ['paragraph', 'chapter', 'content', 'text'])
+                is_not_xml = '<' not in test_input[:100]
+                should_translate = has_text_content and has_translation_keywords and is_not_xml
+
                 print(f"   ✅ 输入 {i+1}: {'需要翻译' if should_translate else '无需翻译'}")
                 print(f"      - 长度: {len(test_input)} 字符")
+                print(f"      - 包含关键词: {has_translation_keywords}")
+                print(f"      - 非XML格式: {is_not_xml}")
 
         print("✅ 翻译包装器逻辑测试通过")
         return True
@@ -227,6 +235,7 @@ def show_usage_examples():
     print("   - 使用 'separate' 模式会生成独立的翻译文件")
     print("   - 使用 '--restore' 可以从之前中断的地方继续处理")
     print("   - 恢复模式不会清理现有的 analysing 和 output 文件夹")
+    print("   - 翻译功能现在只在章节生成阶段启用，确保与其他处理步骤的兼容性")
 
 def main():
     """主测试函数"""
@@ -252,6 +261,7 @@ def main():
         print("🎉 所有测试通过！翻译功能已准备就绪。")
         print("📌 注意：默认翻译模式已设置为单语替换（replace）")
         print("🔄 新增：恢复功能可以从中断的地方继续处理")
+        print("🛡️  改进：翻译功能现在只在章节生成阶段启用，避免格式冲突")
         show_usage_examples()
     else:
         print("❌ 部分测试失败，请检查配置和代码。")

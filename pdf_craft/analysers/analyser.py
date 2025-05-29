@@ -34,9 +34,8 @@ def analyse(
   chapter_path = analysing_dir_path / "chapter"
   reference_path = analysing_dir_path / "reference"
 
-  # 如果启用翻译，创建翻译专用的 LLM 包装器
+  # 显示翻译模式信息（如果启用）
   if translation_config and translation_config.get("enabled"):
-    llm = _create_translation_llm_wrapper(llm, translation_config)
     mode_desc = {
       "replace": "单语替换",
       "dual": "双语对照",
@@ -44,6 +43,7 @@ def analyse(
     }
     mode = translation_config.get("mode", "replace")
     print(f"✓ 翻译模式已激活 - 目标语言: {translation_config.get('target_language', 'zh-CN')}, 模式: {mode_desc.get(mode, mode)}")
+    print("📝 注意：翻译将在章节生成阶段进行，以确保格式兼容性")
 
   generate_ocr_pages(
     extractor=pdf_page_extractor,
@@ -74,8 +74,15 @@ def analyse(
     sequence_path=sequence_output_path / "text",
     max_data_tokens=max_data_tokens,
   )
+
+  # 只在章节生成阶段启用翻译包装器
+  chapter_llm = llm
+  if translation_config and translation_config.get("enabled"):
+    chapter_llm = _create_translation_llm_wrapper(llm, translation_config)
+    print("🔄 在章节生成阶段启用翻译功能...")
+
   chapter_output_path, contents = generate_chapters(
-    llm=llm,
+    llm=chapter_llm,
     contents=contents,
     sequence_path=sequence_output_path / "text",
     workspace_path=chapter_path,
@@ -127,10 +134,15 @@ class _TranslationLLMWrapper:
 
   def _should_translate(self, input_data) -> bool:
     """判断是否需要翻译此输入"""
-    # 简单的启发式：如果输入包含文本内容，则需要翻译
+    # 更保守的翻译策略：只翻译明显的文本内容
     input_str = str(input_data)
-    return len(input_str) > 100 and any(keyword in input_str.lower() for keyword in
-                                       ['text', 'content', 'paragraph', 'chapter'])
+    # 检查是否包含大量文本内容，且不是 XML 或结构化数据
+    has_text_content = len(input_str) > 200
+    has_translation_keywords = any(keyword in input_str.lower() for keyword in
+                                  ['paragraph', 'chapter', 'content', 'text'])
+    is_not_xml = '<' not in input_str[:100]  # 简单检查是否为 XML
+
+    return has_text_content and has_translation_keywords and is_not_xml
 
   def _add_translation_instruction(self, input_data):
     """为输入添加翻译指令"""
